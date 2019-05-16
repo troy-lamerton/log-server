@@ -1,0 +1,45 @@
+{
+  "name": "log-server",
+  "version": "1.0.0",
+  "description": "Displays logs that it receives from test devices",
+  "main": "server/index.ts",
+  "scripts": {
+    "start": "cd build && node .",
+    "build": "ts-node build.ts && webpack",
+    "dev": "nodemon --delay 1 server/index.ts",
+    "dev2": "ts-node server/index.ts",
+    "migrate-json": "ts-node scripts/moveJsonIntoDatabase.ts"
+  },
+  "dependencies": {
+    "@types/lodash": "^4.14.123",
+    "@types/node": "^11.12.1",
+    "@types/pino": "^5.8.5",
+    "@types/sanitize-html": "^1.18.3",
+    "@types/shelljs": "^0.8.3",
+    "copy-webpack-plugin": "^5.0.3",
+    "dotenv": "^6.2.0",
+    "fastify": "^2.3.0",
+    "fastify-static": "^2.4.0",
+    "foobar-ipsum": "^1.0.3",
+    "knex": "^0.16.5",
+    "lodash": "^4.17.11",
+    "lorem-ipsum": "^2.0.2",
+    "pino": "^5.11.1",
+    "pino-pretty": "^2.6.0",
+    "sanitize-html": "^1.20.1",
+    "shelljs": "^0.8.3",
+    "sqlite3": "^4.0.8",
+    "ts-lint": "^4.5.1",
+    "ts-loader": "^5.3.3",
+    "ts-node": "^8.0.2",
+    "tslint": "^5.13.1",
+    "typescript": "^3.3.3333",
+    "webpack": "^4.29.6",
+    "webpack-cli": "^3.3.0"
+  },
+  "devDependencies": {
+    "nodemon": "^1.18.10"
+  },
+  "author": "Troy",
+  "license": "MIT"
+}
