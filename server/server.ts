@@ -223,7 +223,6 @@ function page(title: string, array: any[], elementToHtml: (element: string) => s
     const button = `<button id="refresh" class="sticky" onClick="(function(){
         if (window.location.hash) {
             window.location.hash = ''
-            document.location.reload()
         } else {
             window.location.hash = 'paused'
         }
