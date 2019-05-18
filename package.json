@@ -5,6 +5,7 @@
   "main": "server/index.ts",
   "scripts": {
     "start": "cd build && node .",
+    "tmux": "tmux new -d 'yarn build && yarn start'",
     "build": "ts-node build.ts && webpack",
     "dev": "nodemon --delay 1 server/index.ts",
     "dev2": "ts-node server/index.ts",
