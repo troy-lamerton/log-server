@@ -1,6 +1,6 @@
 import fastify, { FastifyRequest, FastifyReply } from 'fastify'
 import l from './common/logger'
-import { size, reduce } from 'lodash'
+import { size, reduce, first } from 'lodash'
 import { IncomingMessage, OutgoingMessage } from 'http';
 import sanitizeHtml from 'sanitize-html'
 import staticPlugin from 'fastify-static'
@@ -35,14 +35,22 @@ async function listPlayers(req: FastifyRequest<IncomingMessage>, reply: FastifyR
     const playersList = await db.getListOfPlayers(commit)
 
     const title = `Players on commit ${commit}</h1>`
-
-    if (!size(playersList)) {
+    
+    const numPlayers = size(playersList)
+    if (numPlayers == 0) {
         const html = page(title,
-            [`<div class="empty">No players with logs on commit ${commit} yet</div>`],
+            [`<div class="empty">No players with logs on commit '${commit}' yet</div>`],
             a => a
-        )
-        reply.type('text/html; charset=utf-8').send(html)
-        return
+            )
+            reply.type('text/html; charset=utf-8').send(html)
+            return
+        }
+        
+        // if one player, immediately show that players logs
+        if (numPlayers == 1) {
+            const onlyPlayer = first(playersList);
+            reply.redirect(`/logs/${commit}/${onlyPlayer}`);
+            return;
     }
 
     const html = page(
@@ -209,7 +217,9 @@ function html(array: any[], elementToHtml: (element: string) => string): string 
 }
 
 
-function page(title: string | null, array: any[], elementToHtml: (element: string) => string, includeScript: boolean = false): string {
+function page(title: string, array: any[], elementToHtml: (element: string) => string, includeScript: boolean = false): string {
+    const filter = `<input id="filterMessage" type="text" placeholder="Filter logs" size="12" />`
+    
     const button = `<button id="refresh" class="sticky" onClick="(function(){
         if (window.location.hash) {
             window.location.hash = ''
@@ -218,8 +228,11 @@ function page(title: string | null, array: any[], elementToHtml: (element: strin
             window.location.hash = 'paused'
         }
     })();return false;">Toggle autorefresh</button>`
+    
 
-    const header = title ? `<header><h1 class="sticky">${title}</h1>${button}</header>` : ''
+    const header = `<header>
+        <h1 id="title" class="sticky">${title}</h1><div>${filter}${button}</div>
+    </header>`
 
     const content = html(array, elementToHtml)
 

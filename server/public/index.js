@@ -1,7 +1,17 @@
 window.onload = () => {
-    setTimeout(() => window.scrollTo(0, document.body.scrollHeight), 5)
-    document.documentElement.scrollTop = document.documentElement.scrollHeight
+    document.getElementById('filterMessage').addEventListener('change', e => {
+        const filter = e.currentTarget.value;
+        filterLogs(filter)
+    })
 }
+
+function filterLogs(filter) {
+    const logElements = document.getElementsByTagName('main')[0].children;
+    for (const el of logElements) {
+        el.style.display = el.innerText.toLowerCase().includes(filter.toLowerCase()) ? 'block' : 'none'
+    }
+}
+
 async function query() {
     if (window.location.hash) return
     const logIndex = document.querySelector('main').children.length
@@ -11,6 +21,8 @@ async function query() {
         .then(obj => {
             if (!obj.html) return;
             document.getElementsByTagName('main')[0].innerHTML += obj.html
+            const filter = document.getElementById('filterMessage').value
+            filterLogs(filter)
             window.scrollTo(0, document.body.scrollHeight)
         }).catch(lul => {/* ignored */})
     

@@ -5,7 +5,7 @@ import {uniq} from 'lodash'
 export const db = knex({
     client: 'sqlite3',
     connection: {
-        filename: './database.sqlite'
+        filename: '../database.sqlite'
     },
     useNullAsDefault: true
 })
