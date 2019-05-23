@@ -227,10 +227,15 @@ function page(title: string, array: any[], elementToHtml: (element: string) => s
             window.location.hash = 'paused'
         }
     })();return false;">Toggle autorefresh</button>`
+
+    const flipOrder = `<div id="flipOrder">
+    <input type="checkbox"  name="flipOrder">
+    <label for="flipOrder">Oldest first</label>
+  </div>`
     
 
     const header = `<header>
-        <h1 id="title" class="sticky">${title}</h1><div>${filter}${button}</div>
+        <h1 id="title" class="sticky">${title}</h1><div id="controls">${flipOrder}${filter}${button}</div>
     </header>`
 
     const content = html(array, elementToHtml)
