@@ -205,6 +205,8 @@ export default function runServer(port: number) {
         root: path.join(__dirname, 'public')
     })
 
+    server.register(require('fastify-cors'), { origin: '*' })
+
     // enable ejs template engine
     server.register(pointOfView, {
         engine: {
