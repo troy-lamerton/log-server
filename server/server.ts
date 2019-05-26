@@ -1,11 +1,14 @@
 import fastify, { FastifyRequest, FastifyReply } from 'fastify'
-import l from './common/logger'
-import { size, reduce, first } from 'lodash'
 import { IncomingMessage, OutgoingMessage } from 'http';
+import path from 'path'
+import { size, reduce, first } from 'lodash'
+import foobarIpsum from 'foobar-ipsum'
 import sanitizeHtml from 'sanitize-html'
 import staticPlugin from 'fastify-static'
-import path from 'path'
-import foobarIpsum from 'foobar-ipsum'
+import pointOfView from 'point-of-view'
+import ejs from 'ejs'
+
+import l from './common/logger'
 import * as db from './db';
 
 const dummy = new foobarIpsum({
@@ -200,6 +203,18 @@ export default function runServer(port: number) {
     // serve static files
     server.register(staticPlugin, {
         root: path.join(__dirname, 'public')
+    })
+
+    // enable ejs template engine
+    server.register(pointOfView, {
+        engine: {
+            ejs
+        },
+        includeViewExtension: true,
+        templates: 'server/templates',
+        options: { // this object will be passed to ejs.compile
+            filename: path.resolve('server/templates')
+        },
     })
 
     // 0.0.0.0 listens on all ips, required to work in docker container
