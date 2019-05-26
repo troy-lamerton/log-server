@@ -2,13 +2,13 @@
   "name": "log-server",
   "version": "1.0.0",
   "description": "Displays logs that it receives from test devices",
-  "main": "server/index.ts",
+  "main": "source/index.ts",
   "scripts": {
     "start": "cd build && node .",
     "tmux": "tmux new -d 'yarn build && yarn start'",
     "build": "ts-node build.ts && webpack",
-    "dev": "nodemon --delay 1 server/index.ts",
-    "dev2": "ts-node server/index.ts",
+    "dev": "nodemon --delay 1 source/index.ts",
+    "dev2": "ts-node source/index.ts",
     "migrate-json": "ts-node scripts/moveJsonIntoDatabase.ts"
   },
   "dependencies": {
