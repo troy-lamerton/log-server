@@ -271,7 +271,8 @@ const sanitizeOptions = {
 
 function makeSafe(userInput: string): string {
     // some ios logs have logs containing strings like <filename.mm : 4859834>
-    userInput = userInput.replace(/<([\w\._\- ]+:[\w\._\- ]+)>/g, (match, g1) => `&lt;${g1}&gt;`)
+    userInput = userInput.replace(/</g, `&lt;`)
+    userInput = userInput.replace(/>/g, `&gt;`)
     return sanitizeHtml(userInput, sanitizeOptions)
 }
 
