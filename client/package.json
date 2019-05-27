@@ -3,15 +3,22 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@types/classnames": "^2.2.7",
     "@types/jest": "24.0.13",
+    "@types/lodash": "^4.14.132",
     "@types/node": "12.0.2",
     "@types/react": "16.8.18",
     "@types/react-dom": "16.8.4",
     "@types/superagent": "^4.1.1",
+    "@types/superagent-prefix": "^0.0.2",
+    "classnames": "^2.2.6",
+    "lodash": "^4.17.11",
     "react": "^16.8.6",
     "react-dom": "^16.8.6",
     "react-scripts": "3.0.1",
     "superagent": "^5.0.5",
+    "superagent-prefix": "^0.0.2",
+    "superagent-use": "^0.1.0",
     "typescript": "3.4.5"
   },
   "scripts": {

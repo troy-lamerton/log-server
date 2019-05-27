@@ -1,6 +1,6 @@
 import l from './common/logger'
 import knex from 'knex'
-import {uniq} from 'lodash'
+import { forEach, uniq, uniqBy, set } from 'lodash'
 
 export const db = knex({
     client: 'sqlite3',
@@ -15,9 +15,14 @@ function logs() {
 }
 
 export type Log = {
+    branch: string,
     commit: string,
     player: string,
     message: string
+}
+
+export type BranchesOverview = {
+    [branch: string]: string[] // string array of commit names
 }
 
 export async function prepareDatabase() {
@@ -31,14 +36,16 @@ export async function prepareDatabase() {
     await db.schema.createTable('logs', t => {
         t.increments('id').primary()
         t.timestamp('created_at').defaultTo(db.fn.now());
+        t.string('branch')
         t.string('commit')
         t.string('player')
         t.string('message')
     })
 }
 
-export async function addLog(commit: string, player: string, message: string) {
+export async function addLog(branch: string, commit: string, player: string, message: string) {
     await logs().insert({
+        branch,
         commit,
         player,
         message
@@ -57,6 +64,20 @@ export async function getLogMessages(commit: string, player: string, after: numb
         .select('message') as {message: string}[]
 
     return rows.map(row => row.message)
+}
+
+export async function getBranchesAndCommits(): Promise<BranchesOverview> {
+    const someLogs = await logs()
+        .select('commit', 'branch') as Log[]
+    const unique = uniqBy(someLogs, log => log.commit)
+    const output = {}
+    forEach(unique, log => {
+        if (!output[log.branch]) {
+            output[log.branch] = []
+        }
+        output[log.branch].push(log.commit)
+    })
+    return output
 }
 
 export async function getListOfCommits(): Promise<string[]> {

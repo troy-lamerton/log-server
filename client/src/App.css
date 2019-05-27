@@ -1,18 +1,72 @@
-.App {
-  text-align: center;
+html, body {
+  margin: 0;
+  background-color: #282c34;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, monospace;
 }
 
 main {
   background-color: #282c34;
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
+  align-items: stretch;
+  justify-content: flex-start;
+  font-size: calc(10px + 0.8vmin);
+  line-height: 1.5;
   color: white;
+}
+
+.nameList {
+  padding: 0;
+  overflow: auto;
+  height: 100%;
+}
+.branches {
+  min-width: 18rem;
+  max-width: 24rem;
+  background: #1c1e22;
+}
+.commits {
+  min-width: 10rem;
+  background: #2c2f35;
+}
+.players {
+  max-width: 12rem;
+}
+.name {
+  padding: 0 .8rem;
+  flex-basis: 42px;
+  cursor: pointer;
+}
+
+/* util */
+
+.trunc {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.activeItem {
+  background: rgb(0, 76, 163);
+  font-weight: bold;
+  font-style: italic;
+  margin: 0;
 }
 
 a {
   color: #61dafb;
+}
+
+h2 {
+  margin: 0 1rem;
+  text-align: center;
+  font-weight: 500;
+  color: rgb(255, 255, 255, 0.6);
 }

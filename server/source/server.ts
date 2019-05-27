@@ -18,18 +18,10 @@ const dummy = new foobarIpsum({
     },
 })
 
-async function listLinks(_, reply: FastifyReply<OutgoingMessage>) {
-    const commits = await db.getListOfCommits()
-    if (!size(commits)) {
-        reply.send('There are no logs for any commit')
-        return
-    }
-
-    const html = page('List of commits with logs:', commits,
-        commit => `<div><a href="/logs/${commit}">${commit}</a></div>`
-    )
-
-    reply.type('text/html; charset=utf-8').send(html)
+async function listPlayersJson(req: FastifyRequest<IncomingMessage>, reply: FastifyReply<OutgoingMessage>) {
+    let { commit } = req.params
+    const playersList = await db.getListOfPlayers(commit)
+    reply.type('application/json').send(playersList)
 }
 
 async function listPlayers(req: FastifyRequest<IncomingMessage>, reply: FastifyReply<OutgoingMessage>) {
@@ -75,9 +67,18 @@ export default function runServer(port: number) {
     server.get('/', (_, reply) => {
         reply.redirect('/logs')
     })
-    server.get('/logs', listLinks)
+    server.get('/logs', async function(_, reply: FastifyReply<OutgoingMessage>) {
+        const commitsInBranches = await db.getBranchesAndCommits()
+        if (!size(commitsInBranches)) {
+            return reply.code(204).send()
+        }
+    
+        reply
+            .type('application/json')
+            .send(commitsInBranches)
+    })
 
-    server.get('/logs/:commit', listPlayers)
+    server.get('/logs/:commit', listPlayersJson)
 
     /** Show all logs for this commit */
     server.get('/logs/:commit/:player/new', async (req, reply) => {
@@ -108,6 +109,7 @@ export default function runServer(port: number) {
             html: content
         })
     })
+
     server.get('/logs/:commit/:player', async (req, reply) => {
         const { commit, player } = req.params
 
@@ -135,10 +137,11 @@ export default function runServer(port: number) {
     server.post('/logs/:commit/:player', async (req, reply) => {
         const msg = req.body.trim()
         const { commit, player } = req.params
+        const branch = req.query.branch || '#branch_unknown'
 
         const safe = makeSafe(msg)
 
-        await db.addLog(commit, player, safe)
+        await db.addLog(branch, commit, player, safe)
 
         reply.send('OK')
     })
@@ -172,22 +175,27 @@ export default function runServer(port: number) {
     // debug
     server.get('/logs/:commit/:player/:msg', async (req, reply) => {
         const { commit, player, msg } = req.params
+        const branch = req.query.branch || '#branch_unknown'
         try {
-            await db.addLog(commit, player, makeSafe(msg))
+            await db.addLog(branch, commit, player, makeSafe(msg))
             reply.send('OK')
         } catch {
             reply.code(400).send(`Bad input: ${commit}/${player}`)
         }
     })
-
-    // debug
+    server.get('/debug', async (_, reply) => {
+        const all = await db.db('logs').select()
+        reply.type('application/json')
+            .send(all)
+    })
     server.get('/logs/:commit/:player/fill', async (req, reply) => {
         const { commit, player } = req.params
         try {
+            const branch = dummy.word()
             const promises = new Array(100).fill(0).map(() => {
                 const d = new Date()
                 const msg = `00/00 ${d.toTimeString().slice(0,8)}  [Log] ${dummy.sentence()} ${dummy.sentence()} ${dummy.sentence()}`
-                return db.addLog(commit, player, msg)
+                return db.addLog(branch, commit, player, msg)
             })
 
             await Promise.all(promises)
@@ -221,6 +229,23 @@ export default function runServer(port: number) {
 
     // 0.0.0.0 listens on all ips, required to work in docker container
     db.prepareDatabase().then(() => {
+        if (process.env.DEBUG) {
+            let branch = dummy.word()
+            const base = Math.random()
+            const dummyData = new Array(100).fill(0).map((_, i) => {
+                if (i % 10 == 0) {
+                    branch = `feature/${dummy.word()}`
+                }
+                const d = new Date()
+                const message = `00/00 ${d.toTimeString().slice(0,8)}  [Log] ${dummy.sentence()} ${dummy.sentence()} ${dummy.sentence()}`
+                const commit = (base * (i + 1)).toString(16).slice(5)
+                const player = dummy.word()
+                return { branch, commit, player, message }
+            })
+            db.db.batchInsert('logs', dummyData, 50).then(() => {
+                console.log('done inserting dummy')
+            })
+        }
         server.listen(port, '0.0.0.0', err => {
             if (err) throw err
         })
