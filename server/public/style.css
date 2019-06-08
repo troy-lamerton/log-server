@@ -19,9 +19,12 @@ main {
     flex-direction: column; /* dont allow reversing */
     flex-wrap: wrap;
     max-height: calc(100% - 5.5em - 1em);
+    margin-left: 0;
 }
 .list-item {
-    margin: 0.1em 0.8em;
+    margin: 0.1em 0;
+    margin-left: 0.4em;
+    padding: 0 0.6em;
 }
 
 time {
@@ -37,6 +40,7 @@ header {
     padding: 0 1em;
     background: #4c4c4c;
     color: white;
+
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -53,23 +57,25 @@ header {
     align-items: center;
 }
 #controls > * {
-    font-size: 1.2em;
+    font-size: 1.05em;
 }
-#flipOrder {
+#flipOrderContainer {
+    /* background: rgba(83, 83, 83, 0.514); */
+    padding-right: .6em;
     height: 2.3em;
     display: inline-flex;
     justify-content: center;
     align-items: center;
-    margin-right: 1.5em;
+    margin-right: 1.2em;
 }
-#flipOrder > input {
-    height: 2em;
-    width: 2em;
+#flipOrderContainer > input {
+    height: 1.4em;
+    width: 1.4em;
     margin: 0.5em;
 }
 #filterMessage {
     height: 2.3em;
-    margin-right: 1.5em;
+    margin-right: 1.2em;
     padding: 0.3em 0.4em;
 }
 button {

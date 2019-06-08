@@ -1,19 +1,8 @@
 window.onload = () => {
     // get elements
-    const $ = window.jQuery;
     const main = document.querySelector('main');
     const filterInput = document.getElementById('filterMessage');
     const flipOrder = document.getElementsByName('flipOrder')[0];
-
-    $('main').mousewheel(function(e, delta) {
-
-        if (main.classList.contains('commits') 
-        || main.classList.contains('players')) {
-
-            this.scrollLeft -= (delta * 40);
-            e.preventDefault();
-        }
-    });
 
     const startReversed = localStorage.getItem('flipOrder') === 'true'
     if (startReversed) {
@@ -42,6 +31,8 @@ window.onload = () => {
     }
     
     function setDisplayOrder(reversed) {
+        // flipOrder.checked = reversed;
+
         const className = 'reversed';
         if (reversed) {
             main.classList.add(className)

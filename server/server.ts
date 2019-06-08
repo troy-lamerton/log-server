@@ -25,7 +25,8 @@ m.locale('en-GB')
 function timestampToElement(timestamp: string, prefix?: string): string {
     const zoned = m.utc(timestamp).local()
     const formatted = zoned.fromNow()
-    return `<time datetime="${zoned}" title="${zoned}">${prefix ? (prefix + ' ') : ''}${formatted}</time>`
+    const formattedAbsolute = zoned.format('lll')
+    return `<time datetime="${timestamp}" title="${formattedAbsolute}">${prefix ? (prefix + ' ') : ''}${formatted}</time>`
 }
 
 async function listLinks(req: FastifyRequest<IncomingMessage>, reply: FastifyReply<OutgoingMessage>) {
@@ -37,7 +38,7 @@ async function listLinks(req: FastifyRequest<IncomingMessage>, reply: FastifyRep
     }
 
     const html = page(
-        'List of commits with logs:',
+        'Commits with logs',
         uniqueCommits,
         log => `<div class="list-item"><a href="/logs/${log.commit}">${log.commit}</a>${timestampToElement(log.created_at)}</div>`,
         'links'
@@ -263,7 +264,7 @@ function html<T>(array: T[], elementToHtml: (element: T) => string): string {
 
 
 function page<T>(title: string, array: T[], elementToHtml: (element: T) => string, className: string = ''): string {
-    const filter = `<input id="filterMessage" type="text" placeholder="Search" size="12" />`
+    const filter = `<input id="filterMessage" type="text" placeholder="Search this list" size="22" />`
     
     const button = `<button id="refresh" class="sticky" onClick="(function(){
         if (window.location.hash) {
@@ -273,11 +274,11 @@ function page<T>(title: string, array: T[], elementToHtml: (element: T) => strin
         }
     })();return false;">Toggle autorefresh</button>`
 
-    const flipOrder = `<div id="flipOrder">
-    <input type="checkbox" name="flipOrder">
-    <label for="flipOrder">Newest first</label>
-  </div>`
-    
+    const flipOrder = `<div id="flipOrderContainer">
+        <input id="flipOrder" name="flipOrder" type="checkbox">
+        <label for="flipOrder">Newest logs first</label>
+    </div>`
+        
 
     const header = `<header>
         <h1 id="title" class="sticky">${title}</h1><div id="controls">${flipOrder}${filter}${button}</div>
@@ -285,25 +286,22 @@ function page<T>(title: string, array: T[], elementToHtml: (element: T) => strin
 
     const content = html(array, elementToHtml)
 
+    const favicon = 'https://emojipedia-us.s3.dualstack.us-west-1.amazonaws.com/thumbs/120/twitter/185/clipboard_1f4cb.png'
     return `<html>
     <head>
         <title>${title}</title>
+        <link rel="shortcut icon" type="image/png" href="${favicon}"/>
         <link rel="stylesheet" href="/style.css" />
-        </head>
-        <body>
+        <script src="/index.js"></script>
+    </head>
+    <body>
         
         ${header}
         
         <main class="${className}">
         ${content}
         </main>
-        
-        <script
-        src="https://code.jquery.com/jquery-3.4.1.slim.min.js"
-        integrity="sha256-pasqAKBDmFT4eHoN2ndd6lN370kFiGUFyTiUHWhU7k8="
-        crossorigin="anonymous"></script>
 
-        <script src="/index.js"></script>
     </body>
     </html>`
 }
