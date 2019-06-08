@@ -1,11 +1,13 @@
 import fastify, { FastifyRequest, FastifyReply } from 'fastify'
-import l from './common/logger'
-import { size, reduce, first } from 'lodash'
+import { get, size, reduce, first } from 'lodash'
 import { IncomingMessage, OutgoingMessage } from 'http';
 import sanitizeHtml from 'sanitize-html'
 import staticPlugin from 'fastify-static'
 import path from 'path'
 import foobarIpsum from 'foobar-ipsum'
+import m from 'moment'
+
+import l from './common/logger'
 import * as db from './db';
 
 const dummy = new foobarIpsum({
@@ -15,15 +17,30 @@ const dummy = new foobarIpsum({
     },
 })
 
-async function listLinks(_, reply: FastifyReply<OutgoingMessage>) {
-    const commits = await db.getListOfCommits()
-    if (!size(commits)) {
+m.locale('en-GB')
+
+/**
+ * @param timestamp UTC timestamp
+ */
+function timestampToElement(timestamp: string, prefix?: string): string {
+    const zoned = m.utc(timestamp).local()
+    const formatted = zoned.fromNow()
+    return `<time datetime="${zoned}" title="${zoned}">${prefix ? (prefix + ' ') : ''}${formatted}</time>`
+}
+
+async function listLinks(req: FastifyRequest<IncomingMessage>, reply: FastifyReply<OutgoingMessage>) {
+    const uniqueCommits = await db.getListOfCommits()
+
+    if (!size(uniqueCommits)) {
         reply.send('There are no logs for any commit')
         return
     }
 
-    const html = page('List of commits with logs:', commits,
-        commit => `<div><a href="/logs/${commit}">${commit}</a></div>`
+    const html = page(
+        'List of commits with logs:',
+        uniqueCommits,
+        log => `<div class="list-item"><a href="/logs/${log.commit}">${log.commit}</a>${timestampToElement(log.created_at)}</div>`,
+        'links'
     )
 
     reply.type('text/html; charset=utf-8').send(html)
@@ -37,26 +54,33 @@ async function listPlayers(req: FastifyRequest<IncomingMessage>, reply: FastifyR
     const title = `Players on commit ${commit}</h1>`
     
     const numPlayers = size(playersList)
+
     if (numPlayers == 0) {
-        const html = page(title,
+        const html = page(
+            title,
             [`<div class="empty">No players with logs on commit '${commit}' yet</div>`],
             a => a
-            )
-            reply.type('text/html; charset=utf-8').send(html)
-            return
-        }
+        )
+        reply.type('text/html; charset=utf-8').send(html)
+        return
+    }
         
-        // if one player, immediately show that players logs
-        if (numPlayers == 1) {
-            const onlyPlayer = first(playersList);
-            reply.redirect(`/logs/${commit}/${onlyPlayer}`);
-            return;
+    // if one player, immediately show that players logs
+    if (numPlayers == 1) {
+        const onlyPlayer = first(playersList).player;
+        reply.redirect(`/logs/${commit}/${encodeURIComponent(onlyPlayer)}`);
+        return;
     }
 
     const html = page(
         title,
         playersList,
-        player => `<div><a href="/logs/${commit}/${player}">${player}</a></div>`
+        ({player, created_at}) => 
+            `<div class="list-item">
+                <a href="/logs/${commit}/${encodeURIComponent(player)}">${player}</a>
+                ${timestampToElement(created_at, 'active')}
+            </div>`,
+        'links'
     )
 
     reply.type('text/html; charset=utf-8').send(html)
@@ -121,8 +145,7 @@ export default function runServer(port: number) {
                 let msgType = msg.match(/  \[(\w+)\] /)
                 const className = msgType ? msgType[1].toLowerCase() : 'unknown'
                 return `<pre class="${className}">${msg.replace('\n', '<br>')}</pre>`
-            },
-            true
+            }
         )
 
         reply.type('text/html').send(content)
@@ -140,7 +163,7 @@ export default function runServer(port: number) {
         reply.send('OK')
     })
 
-    server.get('/hackme', (req, reply) => {
+    server.get('/_hackme', (req, reply) => {
         if (!req.query) {
             reply.code(404).send('Not found')
             return;
@@ -165,8 +188,30 @@ export default function runServer(port: number) {
     server.delete('/logs', deleteLogs)
     server.delete('/logs/:commit', deleteLogs)
     server.delete('/logs/:commit/:player', deleteLogs)
-
+    
     // debug
+    server.get('/logs/_fill', async (req, reply) => {
+        let commit = 'abc12345'
+        let player = 'playa'
+        try {
+            const promises = new Array(100).fill(0).map(() => {
+                const d = new Date()
+                const msg = `00/00 ${d.toTimeString().slice(0, 8)}  [Log] ${dummy.sentence()} ${dummy.sentence()} ${dummy.sentence()}`
+                commit = Math.random().toString(16).slice(8)
+                player = `playa_${Math.random().toString(16).slice(4)}`
+                return db.addLog(commit, player, msg)
+            })
+
+            await Promise.all(promises)
+            
+            reply.code(200).send(`Filled /logs with 100 different commits`)
+
+        } catch (err) {
+            l.error(err)
+            reply.code(400).send(`Error during fill: ${err}`)
+        }
+    })
+
     server.get('/logs/:commit/:player/:msg', async (req, reply) => {
         const { commit, player, msg } = req.params
         try {
@@ -178,7 +223,7 @@ export default function runServer(port: number) {
     })
 
     // debug
-    server.get('/logs/:commit/:player/fill', async (req, reply) => {
+    server.get('/logs/:commit/:player/_fill', async (req, reply) => {
         const { commit, player } = req.params
         try {
             const promises = new Array(100).fill(0).map(() => {
@@ -212,13 +257,13 @@ export default function runServer(port: number) {
 
 
 
-function html(array: any[], elementToHtml: (element: string) => string): string {
+function html<T>(array: T[], elementToHtml: (element: T) => string): string {
     return reduce(array, (prev, curr) => prev + elementToHtml(curr), '')
 }
 
 
-function page(title: string, array: any[], elementToHtml: (element: string) => string, includeScript: boolean = false): string {
-    const filter = `<input id="filterMessage" type="text" placeholder="Filter logs" size="12" />`
+function page<T>(title: string, array: T[], elementToHtml: (element: T) => string, className: string = ''): string {
+    const filter = `<input id="filterMessage" type="text" placeholder="Search" size="12" />`
     
     const button = `<button id="refresh" class="sticky" onClick="(function(){
         if (window.location.hash) {
@@ -229,8 +274,8 @@ function page(title: string, array: any[], elementToHtml: (element: string) => s
     })();return false;">Toggle autorefresh</button>`
 
     const flipOrder = `<div id="flipOrder">
-    <input type="checkbox"  name="flipOrder">
-    <label for="flipOrder">Oldest first</label>
+    <input type="checkbox" name="flipOrder">
+    <label for="flipOrder">Newest first</label>
   </div>`
     
 
@@ -243,14 +288,22 @@ function page(title: string, array: any[], elementToHtml: (element: string) => s
     return `<html>
     <head>
         <title>${title}</title>
-        ${includeScript ? '<script src="/index.js"></script>' : ''}
         <link rel="stylesheet" href="/style.css" />
-    </head>
-    <body>
+        </head>
+        <body>
+        
         ${header}
-        <main>
-            ${content}
+        
+        <main class="${className}">
+        ${content}
         </main>
+        
+        <script
+        src="https://code.jquery.com/jquery-3.4.1.slim.min.js"
+        integrity="sha256-pasqAKBDmFT4eHoN2ndd6lN370kFiGUFyTiUHWhU7k8="
+        crossorigin="anonymous"></script>
+
+        <script src="/index.js"></script>
     </body>
     </html>`
 }

@@ -3,15 +3,7 @@ html, body {
     padding: 0;
     font-family: sans-serif;
 }
-.warning {
-    background: lightyellow;
-}
-.error {
-    background: salmon;
-}
-.exception, .fatal {
-    background: pink;
-}
+
 main {
     margin: 5.5em 1em 1em 1em;
     display: flex;
@@ -20,6 +12,23 @@ main {
 .reversed {
     flex-direction: column-reverse;
 }
+
+/* commits list */
+/* players list */
+.links {
+    flex-direction: column; /* dont allow reversing */
+    flex-wrap: wrap;
+    max-height: calc(100% - 5.5em - 1em);
+}
+.list-item {
+    margin: 0.1em 0.8em;
+}
+
+time {
+    margin-left: 1em;
+    font-size: 0.7em;
+}
+
 header {
     height: 5em;
     width: 100%;
@@ -66,4 +75,14 @@ header {
 button {
     height: 2.3em;
     margin-right: 2em;
+}
+
+.warning {
+    background: lightyellow;
+}
+.error {
+    background: salmon;
+}
+.exception, .fatal {
+    background: pink;
 }

@@ -102,3 +102,4 @@ tmp/
 *.code-workspace
 
 *.sqlite
+.idea/

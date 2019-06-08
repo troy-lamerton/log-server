@@ -1,8 +1,19 @@
 window.onload = () => {
     // get elements
+    const $ = window.jQuery;
     const main = document.querySelector('main');
     const filterInput = document.getElementById('filterMessage');
     const flipOrder = document.getElementsByName('flipOrder')[0];
+
+    $('main').mousewheel(function(e, delta) {
+
+        if (main.classList.contains('commits') 
+        || main.classList.contains('players')) {
+
+            this.scrollLeft -= (delta * 40);
+            e.preventDefault();
+        }
+    });
 
     const startReversed = localStorage.getItem('flipOrder') === 'true'
     if (startReversed) {
@@ -39,31 +50,30 @@ window.onload = () => {
         }
         localStorage.setItem('flipOrder', reversed.toString())
     }
-    function flipDisplayOrder() {
-        setDisplayOrder(!main.classList.contains(className))
-    }
     
     async function query() {
+        const interval = 1500
         if (window.location.hash) {
-            setTimeout(() => query(), 1000)
+            setTimeout(() => query(), interval)
             return
         }
         const logIndex = main.children.length
         
         await fetch(`${window.location.pathname}/new?after=${logIndex}`)
-        .then(res => res.json())
-        .then(obj => {
-            if (!obj.html) return;
-            main.innerHTML += obj.html
-            const filter = filterInput.value
-            filterLogs(filter)
-            if (!isReversed()) window.scrollTo(0, document.body.scrollHeight)
-        }).catch(err => {/* ignored */})
+            .then(res => res.json())
+            .then(obj => {
+                if (!obj.html) return;
+                main.innerHTML += obj.html
+                const filter = filterInput.value
+                filterLogs(filter)
+                if (!isReversed()) window.scrollTo(0, document.body.scrollHeight)
+            }).catch(err => {/* ignored */})
         
-        setTimeout(() => query(), 1000)
+        setTimeout(() => query(), interval)
     }
 
     setTimeout(() => {
+        // start auto refreshing
         query()
-    }, 500)
+    }, 1000)
 }
