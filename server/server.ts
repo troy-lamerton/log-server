@@ -322,8 +322,13 @@ const sanitizeOptions = {
 
 function makeSafe(userInput: string): string {
     // some ios logs have logs containing strings like <filename.mm : 4859834>
-    userInput = userInput.replace(/</g, `&lt;`)
-    userInput = userInput.replace(/>/g, `&gt;`)
+    // treat all tags that dont have a space as text
+    // the only tags allowed through will be <span class="">
+    // because it has a space in side the < >
+    userInput = userInput
+        .replace(/<>/g, `&lt;&gt;`)
+        .replace(/<[^\/ ]+>/g, (_, group1) => `$lt;${group1}&gt;`)
+
     return sanitizeHtml(userInput, sanitizeOptions)
 }
 
