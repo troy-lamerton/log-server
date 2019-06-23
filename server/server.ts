@@ -223,6 +223,18 @@ export default function runServer(port: number) {
         }
     })
 
+    /** Bugsnag crash reports */
+    server.post('/crashes/android', async (req, reply) => {
+        l.info('========= BEGIN crashes/android ==============')
+        l.info(req.body)
+        l.info('========= headers ============================')
+        l.info(req.headers)
+        l.info('========= END ================================')
+        await db.addLog('crashes', 'android', req.headers.join('\n'))
+        await db.addLog('crashes', 'android', req.body)
+        reply.send('OK')
+    })
+
     // debug
     server.get('/logs/:commit/:player/_fill', async (req, reply) => {
         const { commit, player } = req.params
