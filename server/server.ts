@@ -103,6 +103,10 @@ export default function runServer(port: number) {
 
     // register cookie and query auth checker
     server.addHook('onRequest', async (request, reply) => {
+        if (request.req.method.toUpperCase() != 'GET') {
+            return;
+        }
+
         const cookieAuth = get(request, 'cookies.code');
         const queryAuth = get(request, 'query.code');
 
