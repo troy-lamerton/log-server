@@ -51,6 +51,16 @@ header {
     overflow: hidden;
     margin-right: 0.3em;
 }
+#title > a {
+    color: inherit;
+}
+#title > a:hover {
+    color: #d3d7f7;
+}
+#title > a.house {
+    filter: grayscale(1);
+    text-decoration: none;
+}
 #controls {
     display: flex;
     height: 100%;
