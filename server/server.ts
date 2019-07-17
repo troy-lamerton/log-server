@@ -66,7 +66,7 @@ async function listPlayers(req: FastifyRequest<IncomingMessage>, reply: FastifyR
             title,
             [`<div class="empty">No players with logs on commit '${commit}' yet</div>`],
             a => a
-        )
+        );
         reply.type(HTML_UTF8).send(html)
         return
     }
@@ -78,12 +78,14 @@ async function listPlayers(req: FastifyRequest<IncomingMessage>, reply: FastifyR
         return;
     }
 
+    const displayNames = await getPlayersListDisplayNames(playersList);
+
     const html = page(
         title,
         playersList,
-        ({player, created_at}) => 
+        ({player, created_at}, i) =>
             `<div class="list-item">
-                <a href="/logs/${commit}/${encodeURIComponent(player)}">${player}</a>
+                <a href="/logs/${commit}/${encodeURIComponent(player)}">${displayNames[i]}</a>
                 ${timestampToElement(created_at, 'active')}
             </div>`,
         'links'
@@ -128,11 +130,11 @@ export default function runServer(port: number) {
 
     server.setNotFoundHandler((_, reply) => {
         reply.code(404).send('Not found')
-    })
+    });
 
     server.get('/', (_, reply) => {
         reply.redirect('/logs')
-    })
+    });
     server.get('/logs', listLinks)
 
     server.get('/logs/:commit', listPlayers)
@@ -147,9 +149,7 @@ export default function runServer(port: number) {
             playerLogs.push(`No logs for player ${player} yet`)
         }
 
-        const playerFirstHalf = player.slice(0, player.lastIndexOf('_'));
-        const hardware_id = player.slice(player.lastIndexOf('_') + 1);
-        const displayName = await db.getDeviceName({hardware_id}) || hardware_id;
+        const { hardware_id, playerFirstHalf, displayName } = await getPlayerInfo(player);
 
         const nameEdit = `<a title="Click to rename ${displayName}" class="sticky" onClick="(function(){
                     const newName = window.prompt('${playerFirstHalf}_${displayName} \\n Renaming \\'${displayName}\\'');
@@ -310,12 +310,12 @@ export default function runServer(port: number) {
 
 
 
-function html<T>(array: T[], elementToHtml: (element: T) => string): string {
-    return reduce(array, (prev, curr) => prev + elementToHtml(curr), '')
+function html<T>(array: T[], elementToHtml: (element: T, i?: number) => string): string {
+    return reduce(array, (prev, curr, index) => prev + elementToHtml(curr, index), '')
 }
 
 
-function page<T>(title: string, array: T[], elementToHtml: (element: T) => string, className: string = ''): string {
+function page<T>(title: string, array: T[], elementToHtml: (element: T, i?: number) => string, className: string = ''): string {
     const filter = `<input id="filterMessage" type="text" placeholder="Search this list" size="22" />`
     
     const button = `<button id="refresh" class="sticky" onClick="(function(){
@@ -406,4 +406,19 @@ async function deleteLogs(req: FastifyRequest<IncomingMessage>, reply: FastifyRe
     } else {
         reply.send('Must specify a commit or player for logs to delete')
     }
+}
+
+async function getPlayerInfo(player: string) {
+    const playerFirstHalf = player.slice(0, player.lastIndexOf('_'));
+    const hardware_id = player.slice(player.lastIndexOf('_') + 1);
+    const displayName = await db.getDeviceName({hardware_id}) || hardware_id;
+    return { hardware_id, playerFirstHalf, displayName };
+}
+
+async function getPlayersListDisplayNames(playersList: {player: string}[]) {
+    return await Promise.all(
+        playersList.map(row => getPlayerInfo(row.player))
+    ).then(
+        infos => infos.map(playerInfo => playerInfo.playerFirstHalf + '_' + playerInfo.displayName)
+    );
 }
