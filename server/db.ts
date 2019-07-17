@@ -1,6 +1,6 @@
 import l from './common/logger'
 import knex from 'knex'
-import { uniq, uniqBy, reverse } from 'lodash'
+import {reverse, uniqBy} from 'lodash'
 
 export const db = knex({
     client: 'sqlite3',
@@ -10,10 +10,6 @@ export const db = knex({
     useNullAsDefault: true
 })
 
-function logs() {
-    return db('logs')
-}
-
 export type Log = {
     commit: string,
     player: string,
@@ -22,21 +18,38 @@ export type Log = {
     updated_at: string
 }
 
+const devicesTableName = 'devices';
+const logsTableName = 'logs';
+
 export async function prepareDatabase() {
-    const done = await db.schema.hasTable('logs')
-    if (done) {
-        l.warn('Started with existing logs from database')
-        return
+    if (!await db.schema.hasTable(logsTableName)) {
+        l.warn(`Creating ${logsTableName} table`);
+        await db.schema.createTable(logsTableName, t => {
+            t.increments('id').primary()
+            t.timestamps(true, true)
+            t.string('commit')
+            t.string('player')
+            t.string('message')
+        })
     }
-    
-    l.warn('Creating database table for logs')
-    await db.schema.createTable('logs', t => {
-        t.increments('id').primary()
-        t.timestamps(true, true)
-        t.string('commit')
-        t.string('player')
-        t.string('message')
-    })
+
+
+    if (!await db.schema.hasTable(devicesTableName)) {
+        l.warn(`Creating ${devicesTableName} table`);
+        await db.schema.createTable(devicesTableName, t => {
+            t.string('hardware_id').primary();
+            t.string('name');
+            t.timestamps(true, true);
+        })
+    }
+}
+
+function logs() {
+    return db(logsTableName);
+}
+
+function devices() {
+    return db(devicesTableName);
 }
 
 export async function addLog(commit: string, player: string, message: string) {
@@ -91,4 +104,42 @@ export async function deleteLogs(commit?: string, player?: string) {
     if (commit) {
         return await logs().where({commit, player}).delete()
     }
+}
+
+type Device = {
+    hardware_id: string;
+    name: string;
+}
+
+export async function updateDevice({hardware_id, name}: Device) {
+    console.log('update', hardware_id, name);
+    const device = await devices()
+        .where({hardware_id})
+        .first();
+
+    if (device) {
+        await devices().where({
+            hardware_id,
+        }).update({
+            name,
+        });
+    } else {
+        await devices().insert({
+            hardware_id,
+            name,
+        });
+    }
+}
+
+export async function getDevices(): Promise<Device[]> {
+    return await devices().select('hardware_id', 'name');
+}
+
+export async function getDeviceName({hardware_id}: {hardware_id: string}): Promise<string> {
+    const device = await devices()
+        .where({hardware_id})
+        .select()
+        .first() as Device | undefined;
+
+    return device ? device.name : '';
 }

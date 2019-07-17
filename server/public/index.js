@@ -41,6 +41,35 @@ window.onload = () => {
         }
         localStorage.setItem('flipOrder', reversed.toString())
     }
+
+    window.updateDevice = (hardwareId, newName) => {
+        if (newName) {
+            console.info(`renaming device with hardware id ${hardwareId} to '${newName}'`);
+        } else {
+            console.log('cancelled editing name');
+            return;
+        }
+
+        const safeName = encodeURIComponent(newName.replace(/[^a-z0-9_-]/gi, '').slice(0, 100));
+
+        fetch(`/devices/${hardwareId}/edit?name=${safeName}`)
+            .then(res => {
+                if (res.ok) {
+                    window.location.reload();
+                }
+                else {
+                    return res.text();
+                }
+            }).then(errorText => {
+                if (!errorText) return;
+                alert(`Failed to update device name.\n${errorText}`);
+                console.warn(errorText);
+            })
+            .catch(err => {
+                console.warn(err);
+                alert(`Failed to update device name.\n${err}`);
+            });
+    };
     
     async function query() {
         const interval = 1500

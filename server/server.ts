@@ -139,7 +139,7 @@ export default function runServer(port: number) {
 
     /** Show all logs for this commit */
     server.get('/logs/:commit/:player', async (req, reply) => {
-        const { commit, player } = req.params
+        const { commit, player } = req.params as {commit: string, player: string};
 
         const playerLogs = await db.getLogMessages(commit, player)
 
@@ -147,8 +147,17 @@ export default function runServer(port: number) {
             playerLogs.push(`No logs for player ${player} yet`)
         }
 
+        const playerFirstHalf = player.slice(0, player.lastIndexOf('_'));
+        const hardware_id = player.slice(player.lastIndexOf('_') + 1);
+        const displayName = await db.getDeviceName({hardware_id}) || hardware_id;
+
+        const nameEdit = `<a title="Click to rename ${displayName}" class="sticky" onClick="(function(){
+                    const newName = window.prompt('${playerFirstHalf}_${displayName} \\n Renaming \\'${displayName}\\'');
+                    window.updateDevice('${hardware_id}', newName);
+                })();return false;">${displayName}</a>`;
+
         const content = page(
-            `Logs for ${player} on commit <a href="/logs/${commit}">${commit}</a>`,
+            `Logs for ${playerFirstHalf}_${nameEdit} on commit <a href="/logs/${commit}">${commit}</a>`,
             playerLogs,
             msg => {
                 let msgType = msg.match(/  \[(\w+)\] /)
@@ -233,7 +242,38 @@ export default function runServer(port: number) {
         } catch {
             reply.code(400).send(`Bad input: ${commit}/${player}`)
         }
-    })
+    });
+
+    // set device name
+    server.get('/devices', async (req, reply) => {
+        const devices = await db.getDevices();
+
+        reply.code(200)
+            .type(HTML_UTF8)
+            .send(page('Device naming', devices, d => {
+                return `<div>
+                            <pre>${d.hardware_id} => ${d.name}</pre>
+                        </div>`
+            }, 'devices'));
+    });
+
+    // change the device display name /devices/ac0123af09789/edit?name=poco8
+    server.get('/devices/:hardware_id/edit', async (req, reply) => {
+        const hardware_id = get(req.params, 'hardware_id');
+        if (!hardware_id) return reply.code(400).send();
+        let name = get(req.query, 'name');
+        if (!hardware_id || hardware_id.length < 3) return reply.code(400).send('bad hardware id, should be about 12 or 16 characters');
+        if (!name || name.length < 4) return reply.code(400).send('name must be 4 or more characters');
+
+        // keep only safe characters
+        name = name.replace(/[^a-z0-9_-]/ig, '').slice(0, 32);
+
+        await db.updateDevice({hardware_id, name});
+
+        const savedName = await db.getDeviceName({hardware_id});
+        reply.code(200)
+            .send('Name set to ' + savedName);
+    });
 
     // debug
     server.get('/logs/:commit/:player/_fill', async (req, reply) => {

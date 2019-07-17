@@ -8,6 +8,7 @@
     "tmux": "tmux new -d 'yarn build && yarn start'",
     "build": "ts-node build.ts && webpack",
     "dev": "cross-env PORT=3000 LOG_LEVEL=debug nodemon --delay 1 server/index.ts",
+    "dashboard": "cross-env DASHBOARD_PORT=3001 DB_FOLDER=/Users/g4g/workspace node ./start_debug_dashboard.js",
     "dev2": "ts-node server/index.ts",
     "migrate-json": "ts-node scripts/moveJsonIntoDatabase.ts"
   },
