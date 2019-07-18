@@ -103,3 +103,6 @@ tmp/
 
 *.sqlite
 .idea/
+
+### ENV
+.env.local
