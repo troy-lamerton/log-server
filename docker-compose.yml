@@ -1,0 +1,18 @@
+version: '3.6'
+
+services:
+  log-server:
+    build:
+      context: ./
+    environment:
+      PORT: '80'
+      LOG_LEVEL: info
+      VIEW_SECRET_KEY: abc123
+      DB_LIBRARY: sqlite3q
+    ports:
+      - '3000:80'
+    volumes:
+      - ./build:/log-server/build
+      - ${PWD}/database.sqlite:/log-server/database.sqlite
+    command: 'yarn production:watch'
+    container_name: log-server

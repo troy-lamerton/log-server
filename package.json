@@ -2,12 +2,14 @@
   "name": "log-server",
   "version": "1.0.0",
   "description": "Displays logs that it receives from test devices",
-  "main": "server/index.ts",
+  "main": "build/index.js",
   "scripts": {
     "build": "rimraf build && webpack",
-    "production": "cd ./build && node .",
+    "c": "cd ./build && node .",
     "dev": "nodemon server/index.ts",
-    "dev:docker": "docker build -t log-server:latest .",
+    "production:watch": "cd build && nodemon ./index.js",
+    "dev:d": "docker-compose up",
+    "dev:dbuild": "docker build -t log-server:latest .",
     "dev:dash": "node ./start_debug_dashboard.js",
     "start": "cd ./build && node .",
     "tmux": "tmux new -d 'yarn build && yarn start'"

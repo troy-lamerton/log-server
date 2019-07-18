@@ -1,14 +1,37 @@
 import l from './common/logger'
-import knex from 'knex'
+import Knex from 'knex'
 import {reverse, uniqBy} from 'lodash'
 
-export const db = knex({
-    client: 'sqlite3',
-    connection: {
-        filename: '../database.sqlite'
+const configChoice = {
+
+    sqlite3: {
+        client: 'sqlite3',
+        connection: {
+            filename: '../database.sqlite'
+        },
+        useNullAsDefault: true
     },
-    useNullAsDefault: true
-})
+
+    mysql: {
+        client: 'mysql',
+        connection: {
+            host: process.env.MYSQL_HOST,
+            port: process.env.MYSQL_PORT,
+            database: process.env.MYSQL_DB,
+            user: process.env.MYSQL_USER,
+            password: process.env.MYSQL_PASS,
+        },
+    }
+
+};
+
+l.info('Using db library ' + process.env.DB_LIBRARY);
+
+const config = configChoice[process.env.DB_LIBRARY];
+
+if (!config) throw 'process.env.DB_LIBRARY must be set to a database library name: ' + Object.keys(configChoice).join(', ');
+
+export const db = Knex(configChoice[process.env.DB_LIBRARY]);
 
 export type Log = {
     commit: string,
