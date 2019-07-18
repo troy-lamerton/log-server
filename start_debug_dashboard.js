@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('./server/common/env');
 
 const sh = require('shelljs');
 
