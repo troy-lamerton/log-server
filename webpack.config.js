@@ -1,4 +1,4 @@
-var path = require('path');
+const path = require('path');
 const CopyPlugin = require('copy-webpack-plugin');
 
 module.exports = {
@@ -16,6 +16,7 @@ module.exports = {
     },
     plugins: [
         new CopyPlugin([
+            '.env',
             { from: 'server/public', to: 'public' }
         ])
     ],

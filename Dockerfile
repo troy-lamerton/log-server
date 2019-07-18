@@ -1,12 +1,15 @@
-FROM mhart/alpine-node:10.15.3
+FROM node:lts
 
-EXPOSE 8090
+EXPOSE 80
+EXPOSE 5000
 
-COPY . /project
+COPY . /log-server
+WORKDIR /log-server
 
-WORKDIR /project
-RUN [ "yarn" ]
-RUN [ "yarn", "build" ]
+RUN yarn install --frozen-lockfile --non-interactive --production=false
+RUN yarn build
 
-WORKDIR /project/build
-ENTRYPOINT [ "node", "index.js" ]
+ENV PORT 80
+ENV NODE_ENV production
+
+CMD yarn production-docker
